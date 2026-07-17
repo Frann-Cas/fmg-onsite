@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FMG On-Site — Field Console</title>
+<style>
+:root{
+  --bg:#FAF9F6;--panel:#fff;--ink:#2B2A28;--muted:#6B6862;--muted2:#9C988F;
+  --line:#E7E3DA;--label:#F5F3EF;--gold:#C0982E;--goldD:#8f7220;--head:#4A4A46;
+  --ok:#2E7D4F;--warn:#B8860B;--bad:#B23A2E;--holdc:#6b5b8a;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--panel);border-bottom:3px solid var(--gold);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:20}
+header h1{font-family:'Playfair Display',Georgia,serif;font-size:19px;margin:0;letter-spacing:.2px}
+header .sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+nav{display:flex;gap:4px;flex-wrap:wrap;padding:8px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:66px;z-index:19}
+nav button{border:1px solid transparent;background:transparent;color:var(--muted);padding:7px 12px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600}
+nav button.on{background:var(--label);color:var(--goldD);border-color:var(--gold)}
+.commrow{display:flex;gap:6px;padding:10px 18px;background:var(--label);border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
+.chip{border:1px solid var(--line);background:#fff;padding:5px 12px;border-radius:999px;font-size:12.5px;cursor:pointer;color:var(--muted)}
+.chip.on{background:var(--head);color:#fff;border-color:var(--head)}
+main{padding:18px;max-width:1180px;margin:0 auto}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:900px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.kpi b{display:block;font-size:26px;color:var(--head)}
+.kpi span{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+h2{font-family:'Playfair Display',Georgia,serif;font-size:17px;margin:0 0 10px;border-bottom:2px solid var(--gold);padding-bottom:6px}
+.plist{display:grid;gap:10px}
+.prow{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;background:#fff}
+.prow:hover{border-color:var(--gold)}
+.prow .nm{font-weight:700}
+.prow .meta{font-size:12px;color:var(--muted)}
+.pill{padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
+.p-active{background:#E7F3EC;color:var(--ok)}.p-approved{background:#EAF2E9;color:var(--ok)}
+.p-revise{background:#FBEAE8;color:var(--bad)}.p-hold{background:#EFEAF6;color:var(--holdc)}
+.p-pending{background:#FBF3E1;color:var(--warn)}
+label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin:10px 0 4px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;font-family:inherit;background:#fff}
+textarea{min-height:90px;resize:vertical}
+.btn{border:1px solid var(--gold);background:var(--gold);color:#fff;padding:9px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--goldD)}
+.btn.small{padding:5px 10px;font-size:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border:1px solid var(--line);padding:7px 9px;text-align:left}
+th{background:var(--head);color:#fff;font-size:11.5px;text-transform:uppercase}
+.label-cell{background:var(--label);font-weight:700;width:150px}
+.photog{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px}
+.photog img{width:100%;height:90px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.overlay{position:fixed;inset:0;background:rgba(30,28,24,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal{background:#fff;border-radius:12px;max-width:640px;width:100%;max-height:88vh;overflow:auto;padding:20px}
+.close{float:right;border:none;background:transparent;font-size:20px;cursor:pointer;color:var(--muted)}
+.tag{font-size:11px;color:#fff;background:var(--gold);padding:2px 8px;border-radius:999px}
+.empty{text-align:center;padding:40px;color:var(--muted)}
+.sig{font-family:'Brush Script MT',cursive;font-size:26px;color:var(--goldD)}
+.contactrow{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.contactrow a{color:var(--goldD);text-decoration:none;font-size:12px;margin-left:8px}
+.checklist-item{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding:8px 0}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;display:none;z-index:60}
+.toast.show{display:block}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>FMG On-Site — Field Console</h1>
+    <div class="sub">Frances M. González Casalduc · Residential Construction Inspector</div>
+  </div>
+  <div class="row">
+    <button class="btn ghost small" onclick="App.exportBackup()">Export Backup</button>
+    <button class="btn small" onclick="App.newProject()">+ New Property</button>
+  </div>
+</header>
+<nav id="nav"></nav>
+<div class="commrow" id="commrow"></div>
+<main id="main"></main>
+<div id="modalRoot"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- storage (IndexedDB -> localStorage -> in-memory fallback chain) ---------- */
+const DB_NAME='fmg_console_v6', DB_VER=2;
+const STORES=['projects','reports','inspections','issues','contacts','photos','officenotes'];
+let DB, STORAGE_MODE='idb';
+const MEM={};
+STORES.forEach(s=>MEM[s]=[]);
+function openDB(){return new Promise((res,rej)=>{
+  try{
+    const r=indexedDB.open(DB_NAME,DB_VER);
+    r.onupgradeneeded=e=>{const db=e.target.result;STORES.forEach(s=>{if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'});});};
+    r.onsuccess=e=>{DB=e.target.result;res(DB);};
+    r.onerror=()=>rej(r.error);
+    r.onblocked=()=>rej(new Error('IndexedDB blocked'));
+  }catch(e){rej(e);}
+});}
+function lsAvailable(){try{const k='__fmg_test__';localStorage.setItem(k,'1');localStorage.removeItem(k);return true;}catch(e){return false;}}
+function lsKey(store){return 'fmgls_'+store;}
+function lsGetAll(store){try{return JSON.parse(localStorage.getItem(lsKey(store))||'[]');}catch(e){return [];}}
+function lsSetAll(store,arr){try{localStorage.setItem(lsKey(store),JSON.stringify(arr));}catch(e){STORAGE_MODE='mem';MEM[store]=arr;}}
+function txStore(name,mode='readonly'){return DB.transaction(name,mode).objectStore(name);}
+function idbAll(store){
+  if(STORAGE_MODE==='mem') return Promise.resolve(MEM[store]);
+  if(STORAGE_MODE==='ls') return Promise.resolve(lsGetAll(store));
+  return new Promise((res,rej)=>{const r=txStore(store).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);});
+}
+function idbPut(store,obj){
+  if(STORAGE_MODE==='mem'){const i=MEM[store].findIndex(x=>x.id===obj.id);if(i>=0)MEM[store][i]=obj;else MEM[store].push(obj);return Promise.resolve(obj);}
+  if(STORAGE_MODE==='ls'){const arr=lsGetAll(store);const i=arr.findIndex(x=>x.id===obj.id);if(i>=0)arr[i]=obj;else arr.push(obj);lsSetAll(store,arr);return Promise.resolve(obj);}
+  return new Promise((res,rej)=>{const r=txStore(store,'readwrite').put(obj);r.onsuccess=()=>res(obj);r.onerror=()=>rej(r.error);});
+}
+function idbDel(store,id){
+  if(STORAGE_MODE==='mem'){MEM[store]=MEM[store].filter(x=>x.id!==id);return Promise.resolve();}
+  if(STORAGE_MODE==='ls'){const arr=lsGetAll(store).filter(x=>x.id!==id);lsSetAll(store,arr);return Promise.resolve();}
+  return new Promise((res,rej)=>{const r=txStore(store,'readwrite').delete(id);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});
+}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+/* ---------- state ---------- */
+let S={projects:[],reports:[],inspections:[],issues:[],contacts:[],photos:[],officenotes:[]};
+let TAB='dashboard', COMM='all';
+
+const TABS=[['dashboard','Dashboard'],['projects','Projects'],['reports','Reports'],['inspections','Checklist'],['issues','Issues'],['contacts','Contacts'],['generate','Generate'],['compare','Compare']];
+const COMMS=[['all','All Communities'],['DBE','Dorado Beach East'],['Isles','The Isles'],['Plantation','Plantation Village']];
+
+/* ---------- seed data (confirmed) ---------- */
+function seedData(){
+  const now=new Date().toISOString();
+  const mk=(o)=>({id:uid(),createdAt:now,updatedAt:now,photos:[],needsVisit:false,...o});
+  return {
+    projects:[
+      mk({number:'9',community:'DBE',projectName:'Villa #9',owner:'',architect:'',status:'active',arbStatus:'Approved',bond:'',bondNote:'',scopeType:'Terrace roof / interior remodel',completion:0,statusHeadline:'Terrace roof expansion and interior remodel finishing work',nextStep:'',fieldNotes:'Active construction. Approved scope includes terrace with BBQ and concrete pad.',reportNo:'',needsVisit:false}),
+      mk({number:'11',community:'DBE',projectName:'Villa #11',owner:'',architect:'',status:'active',arbStatus:'',bond:'$10,000',bondNote:'',scopeType:'Golf cart garage',completion:0,statusHeadline:'Pending additional $10,000 bond payment',nextStep:'',fieldNotes:'Active construction. Golf cart garage approved. Work has not started yet.',reportNo:'',needsVisit:false}),
+      mk({number:'18',community:'DBE',projectName:'Villa #18',owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'Window remodel',completion:0,statusHeadline:'Window remodel in progress / on hold',nextStep:'',fieldNotes:'Front windows have not arrived. Work is incomplete; some windows still need to be replaced. Visit required to prepare status report.',reportNo:'',needsVisit:true}),
+      mk({number:'22',community:'DBE',projectName:'Villa #22',owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'Door and window replacement',completion:0,statusHeadline:'Door and window replacement in progress',nextStep:'',fieldNotes:'Visit required to prepare construction status report.',reportNo:'',needsVisit:true}),
+      mk({number:'30',community:'DBE',projectName:'Villa #30',owner:'',architect:'',status:'active',arbStatus:'Approved',bond:'',bondNote:'',scopeType:'Full villa remodel',completion:0,statusHeadline:'Full villa remodel in progress',nextStep:'',fieldNotes:'Active construction. General remodel approved by committee. Visit required for status report.',reportNo:'',needsVisit:true}),
+      mk({number:'39',community:'DBE',projectName:'Villa #39',owner:'',architect:'',status:'active',arbStatus:'Not Approved',bond:'',bondNote:'',scopeType:'Facade changes',completion:0,statusHeadline:'Resident submitted facade changes that were not approved',nextStep:'',fieldNotes:'Active construction. Resident is continuing with improvements. Visit required for status report.',reportNo:'',needsVisit:true}),
+      mk({number:'42',community:'DBE',projectName:'Villa #42',owner:'',architect:'',status:'hold',arbStatus:'',bond:'',bondNote:'',scopeType:'Second-floor roof tiles / bond release',completion:0,statusHeadline:'Second-floor roof tile installation pending for bond release',nextStep:'',fieldNotes:'Resident is repairing a leak in this area before installing roof tiles. Final report required to verify missing second-floor roof tiles before bond release.',reportNo:'',needsVisit:true}),
+      mk({number:'59',community:'DBE',projectName:'Villa #59',owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'Finishing work',completion:0,statusHeadline:'Residence in finishing stage',nextStep:'',fieldNotes:'Visit required for status report. House is listed for sale and completion status has not been confirmed.',reportNo:'',needsVisit:true}),
+      mk({number:'113',community:'DBE',projectName:'Villa #113',owner:'',architect:'',status:'active',arbStatus:'Approved',bond:'',bondNote:'',scopeType:'Facade remodel',completion:0,statusHeadline:'Facade remodel in progress',nextStep:'',fieldNotes:'Active construction. Facade remodel approved. Visit required for construction status report.',reportNo:'',needsVisit:true}),
+      mk({number:'120',community:'DBE',projectName:'Villa #120',owner:'',architect:'',status:'hold',arbStatus:'',bond:'',bondNote:'',scopeType:'Driveway / bond release',completion:0,statusHeadline:'Substantially complete — driveway pending',nextStep:'',fieldNotes:'Final report required before bond release.',reportNo:'',needsVisit:true}),
+      mk({number:'126',community:'DBE',projectName:'Villa #126',owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'Remodel on hold',completion:0,statusHeadline:'Construction was on hold due to lack of contractor',nextStep:'',fieldNotes:'Visit required to verify current status and whether construction has resumed.',reportNo:'',needsVisit:true}),
+      mk({number:'136',community:'DBE',projectName:'Villa #136',owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'Terrace and pool',completion:0,statusHeadline:'Terrace and pool expansion in progress',nextStep:'',fieldNotes:'Pending arrival of doors and glass. Active construction. Visit required for construction status report.',reportNo:'',needsVisit:true}),
+      mk({number:'145',community:'DBE',projectName:'Villa #145',owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'Green wall / grass pavers',completion:0,statusHeadline:'Green wall installation pending at grass pavers',nextStep:'',fieldNotes:'Construction stopped due to pending design information. Resident was contacted to submit concrete floor measurements.',reportNo:'',needsVisit:false}),
+      mk({number:'164',community:'DBE',projectName:'Villa #164 — Rear Property Remodel',owner:'Not provided in current file set',architect:'Not provided in current file set',status:'active',arbStatus:'',bond:'',bondNote:'Hold pending concrete-pour verification',scopeType:'Rear property remodel',completion:35,statusHeadline:'Rebar/varilla placement in progress for future concrete pour',nextStep:'Confirm concrete pour date; monitor rear work area',fieldNotes:'Rebar/varilla placement in progress at rear/roof terrace. ~3m clearance pool to neighbor wall. Estimated ~1.5yr timeline at current pace.',reportNo:'DBE 07-2026-003',needsVisit:true}),
+      mk({number:'170',community:'DBE',projectName:'Villa #170',owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'Terrace and gazebo',completion:0,statusHeadline:'Terrace and gazebo area does not match approved scope',nextStep:'',fieldNotes:'Active construction. Visit required to verify whether non-compliant work was corrected.',reportNo:'',needsVisit:true}),
+      mk({number:'175',community:'DBE',projectName:'Villa #175',owner:'',architect:'',status:'hold',arbStatus:'',bond:'',bondNote:'Bond release was not approved',scopeType:'Finishing work / bond',completion:0,statusHeadline:'Finishing stage with remaining details pending',nextStep:'',fieldNotes:'Visit required to verify if details were completed and to prepare final report for release.',reportNo:'',needsVisit:true}),
+      mk({number:'180',community:'DBE',projectName:'Villa #180 — Cruz-Joy Residence',owner:'Cruz-Joy',architect:'Manuel Redondo, Lic. 20173',status:'approved',arbStatus:'Approved as Noted',bond:'$10,000',bondNote:'Not authorized for release',scopeType:'Pool equipment relocation / generator pad',completion:80,statusHeadline:'Pool equipment relocation compliant; generator pad relocated',nextStep:'Next inspection July 14, 2026 — verify material samples & propane installation ARC approval',fieldNotes:'Material samples and propane installation still pending ARC approval. NOTE: older tracker export listed this property generically as "Full remodel started, needs visit" — this record uses the confirmed DBE 07-2026-001 report as primary.',reportNo:'DBE 07-2026-001',nextInspection:'2026-07-14',needsVisit:true}),
+      mk({number:'181',community:'DBE',projectName:'Villa #181',owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'Second-floor expansion',completion:0,statusHeadline:'Second-floor expansion has not started yet',nextStep:'',fieldNotes:'Visit required to verify compliance with approved scope. Follow-up report required.',reportNo:'',needsVisit:true}),
+      mk({number:'192',community:'DBE',projectName:'Villa #192',owner:'',architect:'',status:'active',arbStatus:'Approved',bond:'',bondNote:'',scopeType:'Pool',completion:0,statusHeadline:'Pool approved',nextStep:'',fieldNotes:'Construction cannot start until the required ARB bond is paid.',reportNo:'',needsVisit:false}),
+      mk({number:'193',community:'DBE',projectName:'Villa #193',owner:'',architect:'',status:'active',arbStatus:'Not Approved',bond:'',bondNote:'',scopeType:'Front remodel',completion:0,statusHeadline:'Remodel nearly complete — unapproved front modification pending',nextStep:'',fieldNotes:'New owner wants to keep the front modification and resubmitted it, but it was not approved. Visit required to verify status and prepare report.',reportNo:'',needsVisit:true}),
+      mk({number:'258',community:'DBE',projectName:'Villa #258',owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'Second-level windows',completion:0,statusHeadline:'Second-level window replacement',nextStep:'',fieldNotes:'Active construction. Visit required for construction status report.',reportNo:'',needsVisit:true}),
+      mk({number:'266',community:'DBE',projectName:'Villa #266',owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'Finishing work',completion:0,statusHeadline:'Finishing stage, substantially complete',nextStep:'',fieldNotes:'Visit required for final status report.',reportNo:'',needsVisit:false}),
+      mk({number:'372',community:'DBE',projectName:'Villa #372 — TJ Dorado Residence / Kirkpatrick Residence',owner:'',architect:'',status:'hold',arbStatus:'Approved as Noted',bond:'$5,000',bondNote:'Bond release NOT recommended until final completion and compliance verified. (Flag: prior notes said $500 — actual export shows $5,000; using export value.)',scopeType:'Golf cart garage addition, entrance door replacement, exterior paint (Creamy SW7012), window cladding (Jet Black/RAL 9005), exterior lighting, driveway/hardscape and landscape improvements',completion:60,statusHeadline:'Site inspected — final completion and compliance pending',nextStep:'Verify garage door replacement/metal frame approval; confirm underground trash receptacle installation vs. Site/Hardscape Plan L-3.0; complete final cleanup.',fieldNotes:'Garage door replacement previously noted as not approved. Underground trash receptacles shown on plan but not clearly visible on site visit.',reportNo:'',needsVisit:true}),
+      mk({number:'20',community:'Isles',projectName:'Villa #20 — Gonzalez Santiago Residence',owner:'Gonzalez Santiago',architect:'Fernando Rodriguez, CED 23',status:'approved',arbStatus:'ARB Approved as Noted (Apr 30, 2023)',bond:'$500',bondNote:'',scopeType:'Cantilever entry roof',completion:100,statusHeadline:'Cantilever entry roof confirmed compliant against drawings',nextStep:'ARB approval stamp not visible on drawings; Owner/GC/Permit fields blank — flag for confirmation',fieldNotes:'',reportNo:'TI 07-2026-001',needsVisit:false}),
+      mk({number:'21',community:'Isles',projectName:'Villa #21 — Puopolo Residence',owner:'Puopolo · 21 Ga Lane',architect:'Arquitectos CSP / Francisco Rivera',status:'revise',arbStatus:'ARB Revise & Resubmit (Jan 20, 2026)',bond:'$10,000',bondNote:'',scopeType:'Auxiliary structure',completion:40,statusHeadline:'Unapproved auxiliary structure (~8.5ft, NE corner) flagged',nextStep:'Setback discrepancy: handwritten notes ref. 3m/2m vs. prior approval referencing 10ft setback — resolve',fieldNotes:'Contractor: Jose Santiago.',reportNo:'TI 07-2026-002',needsVisit:true}),
+    ],
+    reports:[],inspections:[],issues:[
+      mk({community:'Isles',property:'Villa #21',title:'Unapproved auxiliary structure',severity:'high',status:'open',notes:'~8.5ft structure at NE corner not on approved drawings.'}),
+      mk({community:'Isles',property:'Villa #21',title:'Setback discrepancy',severity:'high',status:'open',notes:'Handwritten notes reference 3m/2m; prior approval references 10ft setback. Needs resolution.'}),
+      mk({community:'DBE',property:'Villa #180',title:'Material samples pending',severity:'med',status:'open',notes:'Material samples and propane installation still pending ARC approval.'}),
+    ],
+    contacts:[
+      mk({name:'Yamil Afanador',role:'ARB / Office Contact',community:'DBE',phone:'',email:''}),
+      mk({name:'ARB Office',role:'Architectural Review Board',community:'DBE',phone:'',email:''}),
+      mk({name:'ARC Office',role:'Architectural Review Committee',community:'Isles',phone:'',email:''}),
+      mk({name:'ARB Office',role:'Architectural Review Board',community:'Plantation',phone:'',email:''}),
+    ],
+    photos:[],officenotes:[]
+  };
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  try{
+    try{ await openDB(); STORAGE_MODE='idb'; }
+    catch(e){
+      STORAGE_MODE = lsAvailable() ? 'ls' : 'mem';
+      console.warn('IndexedDB unavailable, using '+STORAGE_MODE+' fallback:',e);
+    }
+    for(const s of STORES){S[s]=await idbAll(s);}
+    if(S.projects.length===0){
+      const seed=seedData();
+      for(const s of STORES){for(const rec of seed[s]){await idbPut(s,rec);}}
+      for(const s of STORES){S[s]=await idbAll(s);}
+    }
+    if(STORAGE_MODE==='mem'){
+      const banner=document.createElement('div');
+      banner.style.cssText='background:#FBF3E1;color:#8f7220;padding:8px 18px;font-size:12px;text-align:center;border-bottom:1px solid var(--gold)';
+      banner.textContent='Preview mode — storage is blocked in this view, so nothing you add here will be saved. Open the file in a real browser tab or on the deployed site to keep changes.';
+      document.body.insertBefore(banner, document.body.firstChild);
+    }
+    render();
+  }catch(err){
+    document.getElementById('main').innerHTML=`<div class="card"><h2>Something went wrong loading the console</h2><p style="color:var(--muted)">${esc(err&&err.message||err)}</p><p style="font-size:12px;color:var(--muted2)">If you opened this file directly (file://...), try uploading it to GitHub Pages instead — some browsers block local storage for files opened this way.</p></div>`;
+    console.error(err);
+  }
+}
+async function saveAll(store){S[store]=await idbAll(store);}
+
+/* ---------- helpers ---------- */
+const stLbl=k=>({active:'Active',approved:'Approved',revise:'Revise & Resubmit',hold:'Hold',pending:'Pending'}[k]||k);
+const stPill=k=>`<span class="pill p-${k||'pending'}">${stLbl(k)}</span>`;
+function commOf(p){return p.community;}
+function inComm(list){return COMM==='all'?list:list.filter(x=>x.community===COMM);}
+
+/* ---------- nav render ---------- */
+function buildNav(){
+  document.getElementById('nav').innerHTML=TABS.map(([k,l])=>`<button class="${TAB===k?'on':''}" onclick="App.go('${k}')">${l}</button>`).join('');
+  document.getElementById('commrow').innerHTML=COMMS.map(([k,l])=>`<span class="chip ${COMM===k?'on':''}" onclick="App.setComm('${k}')">${l}</span>`).join('');
+}
+
+function render(){
+  buildNav();
+  const m=document.getElementById('main');
+  const views={dashboard:vDashboard,projects:vProjects,reports:vReports,inspections:vInspections,issues:vIssues,contacts:vContacts,generate:vGenerate,compare:vCompare};
+  m.innerHTML=views[TAB]();
+}
+
+/* ---------- Dashboard ---------- */
+function vDashboard(){
+  const P=inComm(S.projects);
+  const openIssues=inComm(S.issues).filter(i=>i.status==='open');
+  const avgC=P.length?Math.round(P.reduce((a,p)=>a+(p.completion||0),0)/P.length):0;
+  const nextInsp=P.filter(p=>p.nextInspection).sort((a,b)=>a.nextInspection.localeCompare(b.nextInspection))[0];
+  const needVisit=P.filter(p=>p.needsVisit);
+  return `
+  <div class="grid g4">
+    <div class="card kpi"><b>${P.length}</b><span>Properties</span></div>
+    <div class="card kpi"><b>${openIssues.length}</b><span>Open Issues</span></div>
+    <div class="card kpi"><b>${needVisit.length}</b><span>Need Site Visit</span></div>
+    <div class="card kpi"><b>${nextInsp?esc(nextInsp.number):'—'}</b><span>Next Inspection${nextInsp?' · '+esc(nextInsp.nextInspection):''}</span></div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="grid g2">
+    <div class="card">
+      <h2>Meeting Snapshot — Needs Decision</h2>
+      <div class="plist">${openIssues.length?openIssues.map(i=>`<div class="prow"><div><div class="nm">${esc(i.property)} — ${esc(i.title)}</div><div class="meta">${esc(i.community)} · ${esc(i.notes||'')}</div></div><span class="pill p-revise">${esc(i.severity)}</span></div>`).join(''):'<div class="empty">No open issues flagged.</div>'}</div>
+    </div>
+    <div class="card">
+      <h2>Needs Site Visit (${needVisit.length})</h2>
+      <div class="plist">${needVisit.length?needVisit.map(p=>`<div class="prow" onclick="App.openProject('${p.id}')"><div><div class="nm">${esc(p.projectName)}</div><div class="meta">${esc(p.community)} · ${esc(p.statusHeadline||'')}</div></div>${stPill(p.status)}</div>`).join(''):'<div class="empty">Nobody flagged.</div>'}</div>
+    </div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="card">
+    <h2>All Active Properties</h2>
+    <div class="plist">${P.map(p=>`<div class="prow" onclick="App.openProject('${p.id}')"><div><div class="nm">${esc(p.projectName)}</div><div class="meta">${esc(p.community)} · ${esc(p.statusHeadline||'')}</div></div>${stPill(p.status)}</div>`).join('')}</div>
+  </div>`;
+}
+
+/* ---------- Projects ---------- */
+function vProjects(){
+  const P=inComm(S.projects);
+  return `<div class="card"><h2>Properties${COMM!=='all'?' — '+esc(COMMS.find(c=>c[0]===COMM)[1]):''}</h2>
+  <div class="plist">${P.length?P.map(p=>`
+    <div class="prow" onclick="App.openProject('${p.id}')">
+      <div><div class="nm">${esc(p.projectName)}</div><div class="meta">${esc(p.community)} · Bond ${esc(p.bond||'—')} · ${esc(p.completion||0)}% complete</div></div>
+      ${stPill(p.status)}
+    </div>`).join(''):'<div class="empty">No properties in this view.</div>'}</div></div>`;
+}
+function projectDetail(id){
+  const p=S.projects.find(x=>x.id===id); if(!p) return '';
+  return `<button class="close" onclick="App.close()">&times;</button>
+  <h2>${esc(p.projectName)}</h2>
+  <table>
+    <tr><td class="label-cell">Community</td><td>${esc(p.community)}</td><td class="label-cell">Status</td><td>${stPill(p.status)}</td></tr>
+    <tr><td class="label-cell">Owner</td><td>${esc(p.owner||'—')}</td><td class="label-cell">Architect</td><td>${esc(p.architect||'—')}</td></tr>
+    <tr><td class="label-cell">ARB/ARC Status</td><td colspan="3">${esc(p.arbStatus||'—')}</td></tr>
+    <tr><td class="label-cell">Bond</td><td>${esc(p.bond||'—')}</td><td class="label-cell">Bond Note</td><td>${esc(p.bondNote||'—')}</td></tr>
+    <tr><td class="label-cell">Scope</td><td colspan="3">${esc(p.scopeType||'—')}</td></tr>
+    <tr><td class="label-cell">Status Headline</td><td colspan="3">${esc(p.statusHeadline||'—')}</td></tr>
+    <tr><td class="label-cell">Next Step</td><td colspan="3">${esc(p.nextStep||'—')}</td></tr>
+    <tr><td class="label-cell">Field Notes</td><td colspan="3">${esc(p.fieldNotes||'—')}</td></tr>
+    <tr><td class="label-cell">Report No.</td><td>${esc(p.reportNo||'—')}</td><td class="label-cell">Completion</td><td>${esc(p.completion||0)}%</td></tr>
+  </table>
+  <div class="row" style="margin-top:12px">
+    <button class="btn small" onclick="App.editProject('${p.id}')">Edit</button>
+    <button class="btn ghost small" onclick="App.genReport('${p.id}')">Generate Report</button>
+    <button class="btn ghost small" onclick="App.close()">Close</button>
+  </div>`;
+}
+function projectEditForm(id){
+  const p=id?S.projects.find(x=>x.id===id):{number:'',community:COMM==='all'?'DBE':COMM,projectName:'',owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'',completion:0,statusHeadline:'',nextStep:'',fieldNotes:'',reportNo:'',nextInspection:''};
+  const g=k=>esc(p[k]||'');
+  return `<button class="close" onclick="App.close()">&times;</button>
+  <h2>${id?'Edit':'New'} Property</h2>
+  <label>House/Villa #</label><input id="f_number" value="${g('number')}">
+  <label>Project Name</label><input id="f_projectName" value="${g('projectName')}">
+  <label>Community</label><select id="f_community"><option value="DBE" ${p.community==='DBE'?'selected':''}>Dorado Beach East</option><option value="Isles" ${p.community==='Isles'?'selected':''}>The Isles</option><option value="Plantation" ${p.community==='Plantation'?'selected':''}>Plantation Village</option></select>
+  <label>Status</label><select id="f_status"><option value="active" ${p.status==='active'?'selected':''}>Active</option><option value="approved" ${p.status==='approved'?'selected':''}>Approved</option><option value="revise" ${p.status==='revise'?'selected':''}>Revise & Resubmit</option><option value="hold" ${p.status==='hold'?'selected':''}>Hold</option><option value="pending" ${p.status==='pending'?'selected':''}>Pending</option></select>
+  <label>Owner</label><input id="f_owner" value="${g('owner')}">
+  <label>Architect</label><input id="f_architect" value="${g('architect')}">
+  <label>ARB/ARC Status</label><input id="f_arbStatus" value="${g('arbStatus')}">
+  <label>Bond</label><input id="f_bond" value="${g('bond')}">
+  <label>Bond Note</label><input id="f_bondNote" value="${g('bondNote')}">
+  <label>Scope Type</label><input id="f_scopeType" value="${g('scopeType')}">
+  <label>Completion %</label><input id="f_completion" type="number" min="0" max="100" value="${p.completion||0}">
+  <label>Status Headline</label><input id="f_statusHeadline" value="${g('statusHeadline')}">
+  <label>Next Step</label><textarea id="f_nextStep">${g('nextStep')}</textarea>
+  <label>Field Notes</label><textarea id="f_fieldNotes">${g('fieldNotes')}</textarea>
+  <label>Next Inspection Date</label><input id="f_nextInspection" type="date" value="${g('nextInspection')}">
+  <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="f_needsVisit" ${p.needsVisit?'checked':''} style="width:auto"> Needs site visit</label>
+  <div class="row" style="margin-top:12px"><button class="btn small" onclick="App.saveProject('${id||''}')">Save</button><button class="btn ghost small" onclick="App.close()">Cancel</button></div>`;
+}
+
+/* ---------- Reports ---------- */
+function vReports(){
+  const P=inComm(S.projects);
+  return `<div class="card"><h2>Reports</h2>
+  <div class="plist">${P.map(p=>`<div class="prow"><div><div class="nm">${esc(p.reportNo||'(no report #)')} — ${esc(p.projectName)}</div><div class="meta">${esc(p.community)}</div></div><button class="btn ghost small" onclick="App.genReport('${p.id}')">Open / Generate</button></div>`).join('')||'<div class="empty">No properties yet.</div>'}</div></div>`;
+}
+function reportHTML(p){
+  const today=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const row=(l,v)=>`<tr><td class="label-cell">${l}</td><td>${v||'—'}</td></tr>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(p.reportNo||p.number)} — ${esc(p.projectName)}</title>
+  <style>
+  body{font-family:Georgia,serif;color:#2B2A28;max-width:760px;margin:30px auto;padding:0 20px}
+  h1{font-size:18px;border-bottom:3px solid #C0982E;padding-bottom:8px}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+  td,th{border:1px solid #E7E3DA;padding:6px 9px}
+  .label-cell{background:#F5F3EF;font-weight:700;width:160px}
+  h3{color:#4A4A46;border-bottom:2px solid #C0982E;padding-bottom:4px;font-size:14px}
+  .sig{font-family:'Brush Script MT',cursive;font-size:28px;color:#8f7220;margin-top:30px}
+  </style></head><body>
+  <h1>DORADO BEACH EAST / THE ISLES — Homeowners Association Construction Inspection Tracker</h1>
+  <p><b>Report No.</b> ${esc(p.reportNo||'—')} &nbsp; <b>Date:</b> ${today} &nbsp; <b>Inspector:</b> Frances González Casalduc</p>
+  <h3>Project Information / Status</h3>
+  <table>
+    ${row('Residence / Project',esc(p.projectName))}
+    ${row('Community',esc(p.community))}
+    ${row('Owner',esc(p.owner))}
+    ${row('Architect',esc(p.architect))}
+    ${row('ARB/ARC Status',esc(p.arbStatus))}
+    ${row('Bond / Deposit',esc(p.bond)+(p.bondNote?' — '+esc(p.bondNote):''))}
+    ${row('Scope',esc(p.scopeType))}
+    ${row('Completion',esc(p.completion)+'%')}
+  </table>
+  <h3>Current Status</h3><p>${esc(p.statusHeadline)||'—'}</p>
+  <h3>Field Notes</h3><p>${esc(p.fieldNotes)||'—'}</p>
+  <h3>Inspector Recommendation / Next Step</h3><p>${esc(p.nextStep)||'—'}</p>
+  <div class="sig">Frances M. González Casalduc</div>
+  <p style="font-size:11px;color:#6B6862">FMG On-Site — Residential Construction Inspector</p>
+  </body></html>`;
+}
+
+/* ---------- Inspections/Checklist ---------- */
+const DEFAULT_CHECKLIST=['Foundation','Framing','Electrical rough-in','Plumbing rough-in','Mechanical/HVAC','Setback & fence compliance','Material samples on file','ARB/ARC approval on file','Photos current','Final/Occupancy'];
+function vInspections(){
+  const P=inComm(S.projects);
+  return `<div class="card"><h2>Inspection Checklist</h2>
+  <select id="chk_project" onchange="App.renderChecklistFor(this.value)"><option value="">Select property…</option>${P.map(p=>`<option value="${p.id}">${esc(p.projectName)}</option>`).join('')}</select>
+  <div id="chk_body" style="margin-top:12px"></div></div>`;
+}
+function checklistBody(pid){
+  const p=S.projects.find(x=>x.id===pid); if(!p) return '';
+  const items=p.checklist||DEFAULT_CHECKLIST.map(t=>({t,done:false}));
+  return items.map((it,i)=>`<div class="checklist-item"><label style="margin:0;font-weight:400;font-size:13.5px"><input type="checkbox" ${it.done?'checked':''} onchange="App.toggleChecklist('${pid}',${i})"> ${esc(it.t)}</label></div>`).join('');
+}
+
+/* ---------- Issues ---------- */
+function vIssues(){
+  const I=inComm(S.issues);
+  return `<div class="card"><h2>Issues / Punch List</h2><div class="row" style="margin-bottom:10px"><button class="btn small" onclick="App.newIssue()">+ New Issue</button></div>
+  <div class="plist">${I.length?I.map(i=>`<div class="prow"><div><div class="nm">${esc(i.property)} — ${esc(i.title)}</div><div class="meta">${esc(i.community)} · ${esc(i.notes||'')}</div></div><div class="row"><span class="pill p-revise">${esc(i.severity)}</span>${i.status==='open'?`<button class="btn ghost small" onclick="App.resolveIssue('${i.id}')">Resolve</button>`:'<span class="tag">Resolved</span>'}</div></div>`).join(''):'<div class="empty">No issues.</div>'}</div></div>`;
+}
+
+/* ---------- Contacts ---------- */
+function vContacts(){
+  const C=inComm(S.contacts);
+  return `<div class="card"><h2>Contacts</h2><div class="row" style="margin-bottom:10px"><button class="btn small" onclick="App.newContact()">+ New Contact</button></div>
+  ${C.length?C.map(c=>`<div class="contactrow"><div><b>${esc(c.name)}</b><div class="meta" style="font-size:12px;color:var(--muted)">${esc(c.role)} · ${esc(c.community)}</div></div><div>${c.phone?`<a href="tel:${esc(c.phone)}">Call</a>`:''}${c.phone?`<a href="sms:${esc(c.phone)}">Text</a>`:''}${c.email?`<a href="mailto:${esc(c.email)}">Email</a>`:''}</div></div>`).join(''):'<div class="empty">No contacts in this view.</div>'}</div>`;
+}
+
+/* ---------- Generate (email/text drafts) ---------- */
+function vGenerate(){
+  const P=inComm(S.projects);
+  return `<div class="card"><h2>Generate Draft</h2>
+  <label>Property</label><select id="gen_project">${P.map(p=>`<option value="${p.id}">${esc(p.projectName)}</option>`).join('')}</select>
+  <label>Type</label><select id="gen_type"><option value="email">Email update</option><option value="text">Text/SMS update</option></select>
+  <div class="row" style="margin-top:10px"><button class="btn small" onclick="App.buildDraft()">Draft</button></div>
+  <div id="gen_out" style="margin-top:12px"></div></div>`;
+}
+
+/* ---------- Compare ---------- */
+function vCompare(){
+  const P=inComm(S.projects);
+  return `<div class="card"><h2>Compare Properties</h2>
+  <table><tr><th>Property</th><th>Community</th><th>Status</th><th>Bond</th><th>Completion</th><th>Next Step</th></tr>
+  ${P.map(p=>`<tr><td>${esc(p.projectName)}</td><td>${esc(p.community)}</td><td>${stLbl(p.status)}</td><td>${esc(p.bond||'—')}</td><td>${esc(p.completion||0)}%</td><td>${esc(p.nextStep||'—')}</td></tr>`).join('')}
+  </table></div>`;
+}
+
+/* ---------- App actions ---------- */
+function openModal(html){document.getElementById('modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)App.close()"><div class="modal">${html}</div></div>`;document.body.style.overflow='hidden';}
+function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2200);}
+
+const App={
+  go(t){TAB=t;render();},
+  setComm(c){COMM=c;render();},
+  close(){document.getElementById('modalRoot').innerHTML='';document.body.style.overflow='';},
+  openProject(id){openModal(projectDetail(id));},
+  newProject(){openModal(projectEditForm(null));},
+  editProject(id){openModal(projectEditForm(id));},
+  async saveProject(id){
+    const g=k=>document.getElementById('f_'+k).value;
+    const now=new Date().toISOString();
+    const existing=id?S.projects.find(x=>x.id===id):null;
+    const rec={id:id||uid(),number:g('number'),projectName:g('projectName'),community:g('community'),status:g('status'),owner:g('owner'),architect:g('architect'),arbStatus:g('arbStatus'),bond:g('bond'),bondNote:g('bondNote'),scopeType:g('scopeType'),completion:Number(g('completion')||0),statusHeadline:g('statusHeadline'),nextStep:g('nextStep'),fieldNotes:g('fieldNotes'),nextInspection:g('nextInspection'),needsVisit:document.getElementById('f_needsVisit').checked,reportNo:existing?.reportNo||'',photos:existing?.photos||[],checklist:existing?.checklist||null,createdAt:existing?.createdAt||now,updatedAt:now};
+    await idbPut('projects',rec); await saveAll('projects'); App.close(); render(); toast('Saved.');
+  },
+  genReport(id){
+    const p=S.projects.find(x=>x.id===id);
+    const w=window.open('','_blank'); if(!w){toast('Allow pop-ups to view report');return;}
+    w.document.write(reportHTML(p)); w.document.close();
+  },
+  newIssue(){
+    openModal(`<button class="close" onclick="App.close()">&times;</button><h2>New Issue</h2>
+    <label>Community</label><select id="i_community"><option value="DBE">DBE</option><option value="Isles">Isles</option><option value="Plantation">Plantation</option></select>
+    <label>Property</label><input id="i_property">
+    <label>Title</label><input id="i_title">
+    <label>Severity</label><select id="i_severity"><option value="high">High</option><option value="med">Medium</option><option value="low">Low</option></select>
+    <label>Notes</label><textarea id="i_notes"></textarea>
+    <div class="row" style="margin-top:12px"><button class="btn small" onclick="App.saveIssue()">Save</button><button class="btn ghost small" onclick="App.close()">Cancel</button></div>`);
+  },
+  async saveIssue(){
+    const g=k=>document.getElementById('i_'+k).value;
+    const rec={id:uid(),community:g('community'),property:g('property'),title:g('title'),severity:g('severity'),notes:g('notes'),status:'open',createdAt:new Date().toISOString()};
+    await idbPut('issues',rec); await saveAll('issues'); App.close(); render(); toast('Issue logged.');
+  },
+  async resolveIssue(id){const it=S.issues.find(x=>x.id===id);it.status='resolved';await idbPut('issues',it);await saveAll('issues');render();toast('Marked resolved.');},
+  newContact(){
+    openModal(`<button class="close" onclick="App.close()">&times;</button><h2>New Contact</h2>
+    <label>Name</label><input id="c_name">
+    <label>Role</label><input id="c_role">
+    <label>Community</label><select id="c_community"><option value="DBE">DBE</option><option value="Isles">Isles</option><option value="Plantation">Plantation</option></select>
+    <label>Phone</label><input id="c_phone">
+    <label>Email</label><input id="c_email">
+    <div class="row" style="margin-top:12px"><button class="btn small" onclick="App.saveContact()">Save</button><button class="btn ghost small" onclick="App.close()">Cancel</button></div>`);
+  },
+  async saveContact(){
+    const g=k=>document.getElementById('c_'+k).value;
+    const rec={id:uid(),name:g('name'),role:g('role'),community:g('community'),phone:g('phone'),email:g('email')};
+    await idbPut('contacts',rec); await saveAll('contacts'); App.close(); render(); toast('Contact saved.');
+  },
+  renderChecklistFor(pid){document.getElementById('chk_body').innerHTML=pid?checklistBody(pid):'';},
+  async toggleChecklist(pid,i){
+    const p=S.projects.find(x=>x.id===pid);
+    const items=p.checklist||DEFAULT_CHECKLIST.map(t=>({t,done:false}));
+    items[i].done=!items[i].done; p.checklist=items; p.updatedAt=new Date().toISOString();
+    await idbPut('projects',p); await saveAll('projects');
+    document.getElementById('chk_body').innerHTML=checklistBody(pid);
+  },
+  buildDraft(){
+    const pid=document.getElementById('gen_project').value;
+    const type=document.getElementById('gen_type').value;
+    const p=S.projects.find(x=>x.id===pid); if(!p)return;
+    let text;
+    if(type==='email'){
+      text=`Subject: ${p.projectName} — Status Update\n\nHello,\n\nStatus update on ${p.projectName} (${p.community}):\n\n${p.statusHeadline||'No headline set.'}\n\nField notes: ${p.fieldNotes||'—'}\n\nNext step: ${p.nextStep||'—'}\n\nBest,\nFrances M. González Casalduc\nFMG On-Site`;
+    } else {
+      text=`${p.projectName} (${p.community}) update: ${p.statusHeadline||'—'}. Next step: ${p.nextStep||'—'}. — Frances, FMG On-Site`;
+    }
+    document.getElementById('gen_out').innerHTML=`<textarea style="min-height:180px">${esc(text)}</textarea><div class="row" style="margin-top:8px"><button class="btn small" onclick="navigator.clipboard.writeText(document.querySelector('#gen_out textarea').value);toast('Copied.')">Copy</button></div>`;
+  },
+  async exportBackup(){
+    const data={}; for(const s of STORES){data[s]=S[s];}
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='fmg-onsite-backup-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  }
+};
+
+boot();
+</script>
+</body>
+</html>
