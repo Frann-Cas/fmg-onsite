@@ -131,6 +131,8 @@ th{background:var(--head);color:#fff;font-size:11.5px;text-transform:uppercase}
 const SUPABASE_URL='https://xpeloehekdnledlxcvil.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_D3xk9-I0X0AHP_zGTzPTBQ_Ov0VouUZ';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const _hashParams=new URLSearchParams(window.location.hash.replace(/^#/,''));
+const AUTH_LINK_TYPE=_hashParams.get('type');
 const STORES=['projects','reports','inspections','issues','contacts','photos','officenotes'];
 async function idbAll(store){
   const {data,error}=await sb.from(store).select('data').order('updated_at',{ascending:true});
@@ -435,6 +437,10 @@ async function syncKnownRecords(){
 /* ---------- boot ---------- */
 async function boot(){
   try{
+    if(AUTH_LINK_TYPE==='invite'||AUTH_LINK_TYPE==='recovery'){
+      document.getElementById('setPasswordScreen').style.display='flex';
+      return;
+    }
     const {data:{session}}=await sb.auth.getSession();
     if(!session){
       document.getElementById('authScreen').style.display='flex';
