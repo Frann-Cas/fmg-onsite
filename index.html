@@ -80,6 +80,7 @@ th{background:var(--head);color:#fff;font-size:11.5px;text-transform:uppercase}
     <div class="sub">Frances M. González Casalduc · Residential Construction Inspector · Records updated through September 15, 2026</div>
   </div>
   <div class="row">
+    <button class="btn ghost small" id="signOutBtn" style="display:none" onclick="Auth.signOut()">Sign Out</button>
     <button class="btn ghost small" onclick="App.exportBackup()">Export Backup</button>
     <button class="btn small" onclick="App.newProject()">+ New Property</button>
   </div>
@@ -91,42 +92,57 @@ th{background:var(--head);color:#fff;font-size:11.5px;text-transform:uppercase}
 <div id="modalRoot"></div>
 <div class="toast" id="toast"></div>
 
+<div id="authScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:100;align-items:center;justify-content:center;padding:20px">
+  <div class="card" style="max-width:360px;width:100%">
+    <h2>FMG On-Site — Sign In</h2>
+    <label>Email</label>
+    <input type="email" id="authEmail" autocomplete="username">
+    <label>Password</label>
+    <input type="password" id="authPassword" autocomplete="current-password">
+    <div class="row" style="margin-top:14px">
+      <button class="btn" onclick="Auth.signIn()">Sign In</button>
+    </div>
+    <div id="authError" style="color:var(--bad);font-size:12.5px;margin-top:10px"></div>
+    <p style="font-size:11.5px;color:var(--muted2);margin-top:14px">Access is by invitation only. Contact Frances if you need an account.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ---------- storage (IndexedDB -> localStorage -> in-memory fallback chain) ---------- */
-const DB_NAME='fmg_console_v6', DB_VER=2;
+/* ---------- storage (Supabase — shared, login-gated) ---------- */
+const SUPABASE_URL='https://xpeloehekdnledlxcvil.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_D3xk9-I0X0AHP_zGTzPTBQ_Ov0VouUZ';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const STORES=['projects','reports','inspections','issues','contacts','photos','officenotes'];
-let DB, STORAGE_MODE='idb';
-const MEM={};
-STORES.forEach(s=>MEM[s]=[]);
-function openDB(){return new Promise((res,rej)=>{
-  try{
-    const r=indexedDB.open(DB_NAME,DB_VER);
-    r.onupgradeneeded=e=>{const db=e.target.result;STORES.forEach(s=>{if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'id'});});};
-    r.onsuccess=e=>{DB=e.target.result;res(DB);};
-    r.onerror=()=>rej(r.error);
-    r.onblocked=()=>rej(new Error('IndexedDB blocked'));
-  }catch(e){rej(e);}
-});}
-function lsAvailable(){try{const k='__fmg_test__';localStorage.setItem(k,'1');localStorage.removeItem(k);return true;}catch(e){return false;}}
-function lsKey(store){return 'fmgls_'+store;}
-function lsGetAll(store){try{return JSON.parse(localStorage.getItem(lsKey(store))||'[]');}catch(e){return [];}}
-function lsSetAll(store,arr){try{localStorage.setItem(lsKey(store),JSON.stringify(arr));}catch(e){STORAGE_MODE='mem';MEM[store]=arr;}}
-function txStore(name,mode='readonly'){return DB.transaction(name,mode).objectStore(name);}
-function idbAll(store){
-  if(STORAGE_MODE==='mem') return Promise.resolve(MEM[store]);
-  if(STORAGE_MODE==='ls') return Promise.resolve(lsGetAll(store));
-  return new Promise((res,rej)=>{const r=txStore(store).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);});
+async function idbAll(store){
+  const {data,error}=await sb.from(store).select('data').order('updated_at',{ascending:true});
+  if(error){console.error(error);return [];}
+  return (data||[]).map(r=>r.data);
 }
-function idbPut(store,obj){
-  if(STORAGE_MODE==='mem'){const i=MEM[store].findIndex(x=>x.id===obj.id);if(i>=0)MEM[store][i]=obj;else MEM[store].push(obj);return Promise.resolve(obj);}
-  if(STORAGE_MODE==='ls'){const arr=lsGetAll(store);const i=arr.findIndex(x=>x.id===obj.id);if(i>=0)arr[i]=obj;else arr.push(obj);lsSetAll(store,arr);return Promise.resolve(obj);}
-  return new Promise((res,rej)=>{const r=txStore(store,'readwrite').put(obj);r.onsuccess=()=>res(obj);r.onerror=()=>rej(r.error);});
+async function idbPut(store,obj){
+  const row={id:obj.id,community:obj.community||null,number:obj.number||null,data:obj,updated_at:new Date().toISOString()};
+  const {error}=await sb.from(store).upsert(row);
+  if(error){console.error(error);throw error;}
+  return obj;
 }
-function idbDel(store,id){
-  if(STORAGE_MODE==='mem'){MEM[store]=MEM[store].filter(x=>x.id!==id);return Promise.resolve();}
-  if(STORAGE_MODE==='ls'){const arr=lsGetAll(store).filter(x=>x.id!==id);lsSetAll(store,arr);return Promise.resolve();}
-  return new Promise((res,rej)=>{const r=txStore(store,'readwrite').delete(id);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});
+async function idbDel(store,id){
+  const {error}=await sb.from(store).delete().eq('id',id);
+  if(error){console.error(error);throw error;}
 }
+const Auth={
+  async signIn(){
+    const email=document.getElementById('authEmail').value.trim();
+    const password=document.getElementById('authPassword').value;
+    const errEl=document.getElementById('authError');
+    errEl.textContent='';
+    const {error}=await sb.auth.signInWithPassword({email,password});
+    if(error){errEl.textContent=error.message;return;}
+    document.getElementById('authScreen').style.display='none';
+    document.getElementById('signOutBtn').style.display='';
+    await loadAppData();
+  },
+  async signOut(){await sb.auth.signOut();location.reload();}
+};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
@@ -380,29 +396,27 @@ async function syncKnownRecords(){
 /* ---------- boot ---------- */
 async function boot(){
   try{
-    try{ await openDB(); STORAGE_MODE='idb'; }
-    catch(e){
-      STORAGE_MODE = lsAvailable() ? 'ls' : 'mem';
-      console.warn('IndexedDB unavailable, using '+STORAGE_MODE+' fallback:',e);
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){
+      document.getElementById('authScreen').style.display='flex';
+      return;
     }
-    for(const s of STORES){S[s]=await idbAll(s);}
-    if(S.projects.length===0){
-      const seed=seedData();
-      for(const s of STORES){for(const rec of seed[s]){await idbPut(s,rec);}}
-      for(const s of STORES){S[s]=await idbAll(s);}
-    }
-    await syncKnownRecords();
-    if(STORAGE_MODE==='mem'){
-      const banner=document.createElement('div');
-      banner.style.cssText='background:#FBF3E1;color:#8f7220;padding:8px 18px;font-size:12px;text-align:center;border-bottom:1px solid var(--gold)';
-      banner.textContent='Preview mode — storage is blocked in this view, so nothing you add here will be saved. Open the file in a real browser tab or on the deployed site to keep changes.';
-      document.body.insertBefore(banner, document.body.firstChild);
-    }
-    render();
+    document.getElementById('signOutBtn').style.display='';
+    await loadAppData();
   }catch(err){
-    document.getElementById('main').innerHTML=`<div class="card"><h2>Something went wrong loading the console</h2><p style="color:var(--muted)">${esc(err&&err.message||err)}</p><p style="font-size:12px;color:var(--muted2)">If you opened this file directly (file://...), try uploading it to GitHub Pages instead — some browsers block local storage for files opened this way.</p></div>`;
+    document.getElementById('main').innerHTML=`<div class="card"><h2>Something went wrong loading the console</h2><p style="color:var(--muted)">${esc(err&&err.message||err)}</p></div>`;
     console.error(err);
   }
+}
+async function loadAppData(){
+  for(const s of STORES){S[s]=await idbAll(s);}
+  if(S.projects.length===0){
+    const seed=seedData();
+    for(const s of STORES){for(const rec of seed[s]){await idbPut(s,rec);}}
+    for(const s of STORES){S[s]=await idbAll(s);}
+  }
+  await syncKnownRecords();
+  render();
 }
 async function saveAll(store){S[store]=await idbAll(store);}
 
