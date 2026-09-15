@@ -110,6 +110,21 @@ th{background:var(--head);color:#fff;font-size:11.5px;text-transform:uppercase}
   </div>
 </div>
 
+<div id="setPasswordScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:101;align-items:center;justify-content:center;padding:20px">
+  <div class="card" style="max-width:360px;width:100%">
+    <h2>Welcome — Set Your Password</h2>
+    <p style="font-size:12.5px;color:var(--muted)">You've been invited to Dorado Beach Inspections. Choose a password to finish setting up your account.</p>
+    <label>New Password</label>
+    <input type="password" id="newPassword" autocomplete="new-password" placeholder="At least 6 characters">
+    <label>Confirm Password</label>
+    <input type="password" id="newPasswordConfirm" autocomplete="new-password">
+    <div class="row" style="margin-top:14px">
+      <button class="btn" onclick="Auth.setPassword()">Set Password & Continue</button>
+    </div>
+    <div id="setPasswordError" style="color:var(--bad);font-size:12.5px;margin-top:10px"></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ---------- storage (Supabase — shared, login-gated) ---------- */
@@ -144,8 +159,29 @@ const Auth={
     document.getElementById('signOutBtn').style.display='';
     await loadAppData();
   },
+  async setPassword(){
+    const p1=document.getElementById('newPassword').value;
+    const p2=document.getElementById('newPasswordConfirm').value;
+    const errEl=document.getElementById('setPasswordError');
+    errEl.textContent='';
+    if(!p1||p1.length<6){errEl.textContent='Password must be at least 6 characters.';return;}
+    if(p1!==p2){errEl.textContent='Passwords do not match.';return;}
+    const {error}=await sb.auth.updateUser({password:p1});
+    if(error){errEl.textContent=error.message;return;}
+    document.getElementById('setPasswordScreen').style.display='none';
+    document.getElementById('signOutBtn').style.display='';
+    history.replaceState(null,'',window.location.pathname);
+    await loadAppData();
+    toast('Password set — welcome!');
+  },
   async signOut(){await sb.auth.signOut();location.reload();}
 };
+sb.auth.onAuthStateChange((event, session)=>{
+  if(event==='PASSWORD_RECOVERY'){
+    document.getElementById('authScreen').style.display='none';
+    document.getElementById('setPasswordScreen').style.display='flex';
+  }
+});
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
