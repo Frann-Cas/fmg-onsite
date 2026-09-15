@@ -176,6 +176,43 @@ function seedData(){
   };
 }
 
+/* ---------- known-records sync (runs every boot, upserts by community+number, never wipes existing data) ---------- */
+const KNOWN_UPDATES=[
+  {number:'383',community:'DBE',projectName:'Villa #383',status:'active',arbStatus:'',scopeType:'Pool/terrace/decking completion — progress to close',statusHeadline:'Progress-to-close inspection — soffit/pool/decking/railing complete; setback verified',nextStep:'Clear debris, remove ladders/equipment, correct exposed wiring before re-inspection',fieldNotes:'Determination set to binary APPROVED/NOT APPROVED (not conditional) per office request. Currently NOT APPROVED given open items.',reportNo:'DBE-0903-383-01',needsVisit:true},
+  {number:'363',community:'DBE',projectName:'Villa #363 — Lopez Residence',owner:'Lopez',architect:'GM & Associates',status:'active',arbStatus:'Approved (A-1A/A-2A/A-8/SI-1, Jun 4 & 29 2024)',scopeType:'Driveway repaving, facade/entry changes, master bath addition, 2nd-level family room expansion, Air Master windows/doors (Negro Mate #93211)',statusHeadline:'Final inspection against approved plans',fieldNotes:'Final inspection report sent Sept 1, 2026 (Report No. DBE-08-2026-363-01).',reportNo:'DBE-08-2026-363-01',needsVisit:false},
+  {number:'8',community:'DBE',projectName:'Villa #8',status:'active',statusHeadline:'First documented visit — existing pool/gazebo, generator enclosure, 2 underground cisterns in rear pebble bed',scopeType:'House expansion / pool replacement',nextStep:'Confirm cistern locations before new pool design finalized',fieldNotes:'Owner plans to expand house, eliminate existing pool, build smaller replacement pool near BBQ/gazebo; design must account for two underground cisterns.',reportNo:'DBE-09-2026-008-01',needsVisit:false},
+  {number:'42',community:'DBE',fieldNotes:'Resident is repairing a leak before installing roof tiles. Final report required to verify missing second-floor roof tiles before bond release. Draft report in progress (DBE-07-2026-042) — needed urgently as of Sep 7, 2026.',needsVisit:true},
+  {number:'50',community:'DBE',projectName:'Villa #50',status:'active',statusHeadline:'Report pending',nextStep:'Field report needed — flagged urgent Sep 7, 2026',needsVisit:true},
+  {number:'60',community:'DBE',projectName:'Villa #60',status:'active',statusHeadline:'Report pending',nextStep:'Field report needed — flagged urgent Sep 7, 2026',needsVisit:true},
+  {number:'104',community:'DBE',projectName:'Villa #104',status:'active',statusHeadline:'Report pending',nextStep:'Field report needed — flagged urgent Sep 7, 2026',needsVisit:true},
+  {number:'399',community:'DBE',projectName:'Villa #399',status:'active',statusHeadline:'No report/photos/case file found as of Sep 8, 2026',nextStep:'Site visit + case file needed',needsVisit:true},
+  {number:'136',community:'DBE',fieldNotes:'Pending arrival of doors and glass. 12-photo set emailed Sep 7, 2026; report not yet issued.',needsVisit:true},
+  {number:'258',community:'DBE',nextStep:'On Sept 8, 2026 board meeting agenda',needsVisit:true},
+  {number:'30',community:'DBE',owner:'Megwinoff',architect:'Alejandro Chipi (achipi82@yahoo.com)',fieldNotes:'Active construction. Owner plans glass windows as a wall along the non-compliant swale line. Planta propuesta + memorial explicativo sent Sept 1, 2026 for committee discussion.',needsVisit:true},
+  {number:'113',community:'DBE',owner:'Jason Sidman',arbStatus:'Revise & Resubmit (Aug 12, 2026)',fieldNotes:'Active construction. Facade remodel. ARB Revise & Resubmit Aug 12, 2026 — no extension along property line, 6m min at closest point, 3m min shown.',needsVisit:true},
+  {number:'192',community:'DBE',owner:'Rafael Zequeira',scopeType:'Pool, window replacement, roof',fieldNotes:'Pool, window replacement. ARB rejected steel-column roof; cantilever alero proposed as alternative. Construction cannot start until required ARB bond is paid.',needsVisit:true},
+  {number:'372',community:'DBE',reportNo:'DBE-0826-372-01',fieldNotes:'Garage door replacement previously noted as not approved. Underground trash receptacles shown on plan but not clearly visible on site visit. Addendum with field photos and DBE branding sent Aug 17, 2026 (Report No. DBE-0826-372-01).'},
+  {number:'21',community:'Isles',status:'active',arbStatus:'Windows Approved (project OPEN)',scopeType:'Window replacement + pool/jacuzzi (ABRA set)',completion:60,statusHeadline:'Windows APPROVED; project OPEN (pool/jacuzzi set pending)',fieldNotes:'Window replacement inspected Aug 24, 2026 — fixed units, color approved by committee. FR Architects set (Gonzalez Santiago Residence) Approved as Noted Aug 30, 2023, condition: wall finish to match original house. Separate ABRA pool/jacuzzi set (Puopolo Residence, AS-101) returned Revise & Resubmit Jan 29, 2026 (3m setback from Lot 22 line).',reportNo:'TI-08-2026-021',needsVisit:false},
+  {number:'65',community:'Isles',projectName:'Villa #65',status:'active',statusHeadline:'Progress comparison across two visits (Aug 13 to Aug 20, 2026)',fieldNotes:'First inspection Aug 13, 2026 (report TI-08-2026-065, work in progress). Second visit Aug 20, 2026 — rear terrace finish, rear-yard/setback tape measurements, side yard completed. Progress comparison report TI-08-2026-065-R2 generated, includes Dorado Beach 10ft/3m setback note.',reportNo:'TI-08-2026-065-R2',needsVisit:false},
+  {number:'69',community:'Isles',projectName:'Villa #69',status:'active',statusHeadline:'Unresolved — Aug 18, 2026 visit referenced but no matching report/photos located',nextStep:'Locate or redo site visit documentation',needsVisit:true},
+  {number:'56',community:'Isles',projectName:'Villa #56',status:'active',statusHeadline:'Report sent Aug 11, 2026',fieldNotes:'Photos from Aug 6, 2026 visit (IMG_1507 to 1518).',reportNo:'TI-0826-056-01',needsVisit:false},
+  {number:'48',community:'Isles',projectName:'Villa #48',status:'active',statusHeadline:'Report completed Aug 18, 2026',reportNo:'TI-08-2026-048',needsVisit:false},
+  {number:'26',community:'Isles',projectName:'Villa #26',status:'active',statusHeadline:'2nd-floor slab formwork/shoring in progress; pool tiled/finish underway',nextStep:'Setback measurements 4ft9in to 10ft4in flagged below 10ft/3m minimum — needs resolution',reportNo:'TI-09-2026-026',needsVisit:true},
+];
+async function syncKnownRecords(){
+  const now=new Date().toISOString();
+  for(const rec of KNOWN_UPDATES){
+    const existing=S.projects.find(p=>String(p.community)===rec.community && String(p.number)===rec.number);
+    if(existing){
+      const merged={...existing,...rec,updatedAt:now};
+      await idbPut('projects',merged);
+    }else{
+      await idbPut('projects',{id:uid(),createdAt:now,updatedAt:now,photos:[],needsVisit:false,community:rec.community,number:rec.number,owner:'',architect:'',status:'active',arbStatus:'',bond:'',bondNote:'',scopeType:'',completion:0,statusHeadline:'',nextStep:'',fieldNotes:'',reportNo:'',...rec});
+    }
+  }
+  S.projects=await idbAll('projects');
+}
+
 /* ---------- boot ---------- */
 async function boot(){
   try{
@@ -190,6 +227,7 @@ async function boot(){
       for(const s of STORES){for(const rec of seed[s]){await idbPut(s,rec);}}
       for(const s of STORES){S[s]=await idbAll(s);}
     }
+    await syncKnownRecords();
     if(STORAGE_MODE==='mem'){
       const banner=document.createElement('div');
       banner.style.cssText='background:#FBF3E1;color:#8f7220;padding:8px 18px;font-size:12px;text-align:center;border-bottom:1px solid var(--gold)';
