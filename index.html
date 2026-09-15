@@ -157,6 +157,7 @@ const Auth={
     errEl.textContent='';
     const {error}=await sb.auth.signInWithPassword({email,password});
     if(error){errEl.textContent=error.message;return;}
+    CURRENT_USER_EMAIL=email;
     document.getElementById('authScreen').style.display='none';
     document.getElementById('signOutBtn').style.display='';
     await loadAppData();
@@ -168,8 +169,9 @@ const Auth={
     errEl.textContent='';
     if(!p1||p1.length<6){errEl.textContent='Password must be at least 6 characters.';return;}
     if(p1!==p2){errEl.textContent='Passwords do not match.';return;}
-    const {error}=await sb.auth.updateUser({password:p1});
+    const {data,error}=await sb.auth.updateUser({password:p1});
     if(error){errEl.textContent=error.message;return;}
+    CURRENT_USER_EMAIL=(data&&data.user&&data.user.email)||'';
     document.getElementById('setPasswordScreen').style.display='none';
     document.getElementById('signOutBtn').style.display='';
     history.replaceState(null,'',window.location.pathname);
@@ -189,6 +191,9 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;'
 
 /* ---------- state ---------- */
 let S={projects:[],reports:[],inspections:[],issues:[],contacts:[],photos:[],officenotes:[]};
+let CURRENT_USER_EMAIL='';
+const ADMIN_EMAILS=['fmg.onsite@gmail.com'];
+const isAdmin=()=>ADMIN_EMAILS.includes((CURRENT_USER_EMAIL||'').toLowerCase());
 let TAB='dashboard', COMM='all';
 
 const TABS=[['dashboard','Dashboard'],['projects','Projects'],['activity','Inspection History'],['reports','Report Register'],['photos','Photo Register'],['invoices','Invoices & Logs'],['inspections','Checklist'],['issues','Issues'],['generate','Generate'],['compare','Compare']];
@@ -446,6 +451,7 @@ async function boot(){
       document.getElementById('authScreen').style.display='flex';
       return;
     }
+    CURRENT_USER_EMAIL=session.user.email||'';
     document.getElementById('signOutBtn').style.display='';
     await loadAppData();
   }catch(err){
@@ -475,7 +481,7 @@ function archiveStatusClass(s){return /issued|verified|on file|reconciled|comple
 
 /* ---------- nav render ---------- */
 function buildNav(){
-  document.getElementById('nav').innerHTML=TABS.map(([k,l])=>`<button class="${TAB===k?'on':''}" onclick="App.go('${k}')">${l}</button>`).join('');
+  document.getElementById('nav').innerHTML=TABS.filter(([k])=>k!=='invoices'||isAdmin()).map(([k,l])=>`<button class="${TAB===k?'on':''}" onclick="App.go('${k}')">${l}</button>`).join('');
   document.getElementById('commrow').innerHTML=COMMS.map(([k,l])=>`<span class="chip ${COMM===k?'on':''}" onclick="App.setComm('${k}')">${l}</span>`).join('');
 }
 
@@ -678,7 +684,7 @@ function openModal(html){document.getElementById('modalRoot').innerHTML=`<div cl
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2200);}
 
 const App={
-  go(t){TAB=t;render();},
+  go(t){if(t==='invoices'&&!isAdmin())return;TAB=t;render();},
   setComm(c){COMM=c;render();},
   close(){document.getElementById('modalRoot').innerHTML='';document.body.style.overflow='';},
   openProject(id){openModal(projectDetail(id));},
